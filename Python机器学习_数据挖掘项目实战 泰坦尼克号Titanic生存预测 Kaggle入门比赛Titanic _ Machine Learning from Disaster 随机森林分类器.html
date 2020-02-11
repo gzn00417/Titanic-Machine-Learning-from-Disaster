@@ -1,0 +1,752 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Python机器学习/数据挖掘项目实战 泰坦尼克号Titanic生存预测 Kaggle入门比赛Titanic : Machine Learning from Disaster 随机森林分类器</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h1><a id="Titanic__Machine_Learning_from_Disaster_0"></a>Titanic : Machine Learning from Disaster</h1>
+<h4><a id="GitHubhttpsgithubcomgzn00417TitanicMachineLearningfromDisaster_1"></a>链接：<a href="https://github.com/gzn00417/Titanic-Machine-Learning-from-Disaster">GitHub源代码</a></h4>
+<blockquote>
+<h1><a id="Question_3"></a>Question</h1>
+<ul>
+<li>要求你建立一个预测模型来回答这个问题：“什么样的人更有可能生存？”使用乘客数据（如姓名、年龄、性别、社会经济阶层等）。</li>
+</ul>
+</blockquote>
+<h1><a id="_8"></a>一、导入数据包和数据集</h1>
+<pre><code class="prism language-python"><span class="token keyword">import</span> pandas <span class="token keyword">as</span> pd
+<span class="token keyword">from</span> pandas <span class="token keyword">import</span> Series<span class="token punctuation">,</span> DataFrame
+<span class="token keyword">import</span> numpy <span class="token keyword">as</span> np
+<span class="token keyword">from</span> matplotlib <span class="token keyword">import</span> pyplot <span class="token keyword">as</span> plt
+<span class="token keyword">import</span> seaborn <span class="token keyword">as</span> sns
+</code></pre>
+<blockquote>
+<ul>
+<li>
+<h6><a id="kaggle_notebookpdread_csvkaggleinputtitanictraincsv_17"></a>重点：在kaggle notebook上时，应该把<code>pd.read_csv("./kaggle/input/titanic/train.csv")</code>引号中第一个<code>'.'</code>去掉</h6>
+</li>
+<li>读入训练集和测试及都需要</li>
+</ul>
+</blockquote>
+<pre><code class="prism language-python">train <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span><span class="token string">"./kaggle/input/titanic/train.csv"</span><span class="token punctuation">)</span>
+test <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span><span class="token string">"./kaggle/input/titanic/test.csv"</span><span class="token punctuation">)</span>
+allData <span class="token operator">=</span> pd<span class="token punctuation">.</span>concat<span class="token punctuation">(</span><span class="token punctuation">[</span>train<span class="token punctuation">,</span> test<span class="token punctuation">]</span><span class="token punctuation">,</span> ignore_index<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+<span class="token comment"># dataNum = train.shape[0]</span>
+<span class="token comment"># featureNum = train.shape[1]</span>
+train<span class="token punctuation">.</span>info<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<h1><a id="_28"></a>二、数据总览</h1>
+<h2><a id="_29"></a>概况</h2>
+<ul>
+<li>输入<code>train.info()</code>回车可以查看数据集整体信息</li>
+</ul>
+<pre><code class="prism language-python"><span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token string">'pandas.core.frame.DataFrame'</span><span class="token operator">&gt;</span>
+RangeIndex<span class="token punctuation">:</span> <span class="token number">891</span> entries<span class="token punctuation">,</span> <span class="token number">0</span> to <span class="token number">890</span>
+Data columns <span class="token punctuation">(</span>total <span class="token number">12</span> columns<span class="token punctuation">)</span><span class="token punctuation">:</span>
+PassengerId    <span class="token number">891</span> non<span class="token operator">-</span>null int64
+Survived       <span class="token number">891</span> non<span class="token operator">-</span>null int64
+Pclass         <span class="token number">891</span> non<span class="token operator">-</span>null int64
+Name           <span class="token number">891</span> non<span class="token operator">-</span>null <span class="token builtin">object</span>
+Sex            <span class="token number">891</span> non<span class="token operator">-</span>null <span class="token builtin">object</span>
+Age            <span class="token number">714</span> non<span class="token operator">-</span>null float64
+SibSp          <span class="token number">891</span> non<span class="token operator">-</span>null int64
+Parch          <span class="token number">891</span> non<span class="token operator">-</span>null int64
+Ticket         <span class="token number">891</span> non<span class="token operator">-</span>null <span class="token builtin">object</span>
+Fare           <span class="token number">891</span> non<span class="token operator">-</span>null float64
+Cabin          <span class="token number">204</span> non<span class="token operator">-</span>null <span class="token builtin">object</span>
+Embarked       <span class="token number">889</span> non<span class="token operator">-</span>null <span class="token builtin">object</span>
+dtypes<span class="token punctuation">:</span> float64<span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span> int64<span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token builtin">object</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span>
+memory usage<span class="token punctuation">:</span> <span class="token number">83.6</span><span class="token operator">+</span> KB
+</code></pre>
+<ul>
+<li>输入<code>train.head()</code>可以查看数据样例<br>
+<img src="https://img-blog.csdnimg.cn/20200211125527112.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></li>
+</ul>
+<h2><a id="_52"></a>特征</h2>
+
+<table>
+<thead>
+<tr>
+<th align="center">Variable</th>
+<th align="center">Definition</th>
+<th align="center">Key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">survival</td>
+<td align="center">Survival</td>
+<td align="center">0 = No, 1 = Yes</td>
+</tr>
+<tr>
+<td align="center">pclass</td>
+<td align="center">Ticket class(客舱等级)</td>
+<td align="center">1 = 1st, 2 = 2nd, 3 = 3rd</td>
+</tr>
+<tr>
+<td align="center">sex</td>
+<td align="center">Sex</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">Age</td>
+<td align="center">Age in years</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">sibsp</td>
+<td align="center"># of siblings / spouses aboard the Titanic(旁系亲属)</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">parch</td>
+<td align="center"># of parents / children aboard the Titanic(直系亲属)</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">ticket</td>
+<td align="center">Ticket number</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">fare</td>
+<td align="center">Passenger fare</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">cabin</td>
+<td align="center">Cabin number(客舱编号)</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">embarked</td>
+<td align="center">Port of Embarkation(上船港口编号)</td>
+<td align="center">C = Cherbourg, Q = Queenstown, S = Southampton</td>
+</tr>
+</tbody>
+</table><h1><a id="_65"></a>三、可视化数据分析</h1>
+<h2><a id="Sex_66"></a>性别特征Sex</h2>
+<ul>
+<li>女性生存率远高于男性</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># Sex</span>
+sns<span class="token punctuation">.</span>countplot<span class="token punctuation">(</span><span class="token string">'Sex'</span><span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">'Survived'</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211130010882.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h2><a id="Pclass_74"></a>等级特征Pclass</h2>
+<ul>
+<li>乘客等级越高，生存率越高</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># Pclass</span>
+sns<span class="token punctuation">.</span>barplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">'Pclass'</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211135026960.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h2><a id="_82"></a>家庭成员数量特征</h2>
+<ul>
+<li>
+<h3><a id="FamilySizeParchSibSp_83"></a>FamilySize=Parch+SibSp</h3>
+</li>
+<li>家庭成员数量适中，生存率高</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># FamilySize = SibSp + Parch + 1</span>
+allData<span class="token punctuation">[</span><span class="token string">'FamilySize'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'SibSp'</span><span class="token punctuation">]</span> <span class="token operator">+</span> allData<span class="token punctuation">[</span><span class="token string">'Parch'</span><span class="token punctuation">]</span> <span class="token operator">+</span> <span class="token number">1</span>
+sns<span class="token punctuation">.</span>barplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">'FamilySize'</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">'Survived'</span><span class="token punctuation">,</span> data<span class="token operator">=</span>allData<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211135254479.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h2><a id="Embarked_93"></a>上船港口特征Embarked</h2>
+<ul>
+<li>上船港口不同，生存率不同</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># Embarked</span>
+sns<span class="token punctuation">.</span>countplot<span class="token punctuation">(</span><span class="token string">'Embarked'</span><span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">'Survived'</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211135503388.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h2><a id="Age_101"></a>年龄特征Age</h2>
+<ul>
+<li>年龄小或者正值壮年生存率高</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># Age</span>
+sns<span class="token punctuation">.</span>stripplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Age"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">,</span> jitter<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211135629215.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<ul>
+<li>年龄生存密度</li>
+</ul>
+<pre><code class="prism language-python">facet <span class="token operator">=</span> sns<span class="token punctuation">.</span>FacetGrid<span class="token punctuation">(</span>train<span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span>aspect<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span>
+facet<span class="token punctuation">.</span><span class="token builtin">map</span><span class="token punctuation">(</span>sns<span class="token punctuation">.</span>kdeplot<span class="token punctuation">,</span><span class="token string">'Age'</span><span class="token punctuation">,</span>shade<span class="token operator">=</span> <span class="token boolean">True</span><span class="token punctuation">)</span>
+facet<span class="token punctuation">.</span><span class="token builtin">set</span><span class="token punctuation">(</span>xlim<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> train<span class="token punctuation">[</span><span class="token string">'Age'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">max</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+facet<span class="token punctuation">.</span>add_legend<span class="token punctuation">(</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>xlabel<span class="token punctuation">(</span><span class="token string">'Age'</span><span class="token punctuation">)</span> 
+plt<span class="token punctuation">.</span>ylabel<span class="token punctuation">(</span><span class="token string">'density'</span><span class="token punctuation">)</span> 
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/2020021113574690.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<blockquote>
+<ul>
+<li>儿童相对于全年龄段有特殊的生存率</li>
+<li>
+<h4><a id="10_123"></a>作者将10及以下视为儿童，设置单独标签</h4>
+</li>
+</ul>
+</blockquote>
+<h2><a id="Fare_124"></a>费用特征Fare</h2>
+<ul>
+<li>费用越高，生存率越高</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># Fare</span>
+sns<span class="token punctuation">.</span>stripplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Fare"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">,</span> jitter<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211140122151.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h2><a id="Name_132"></a>姓名特征Name</h2>
+<h3><a id="Title_133"></a>头衔特征Title</h3>
+<ul>
+<li>头衔由姓名的前置称谓进行分类</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># Name</span>
+allData<span class="token punctuation">[</span><span class="token string">'Title'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'Name'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">:</span>x<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">'.'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>strip<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+pd<span class="token punctuation">.</span>crosstab<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">'Title'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> allData<span class="token punctuation">[</span><span class="token string">'Sex'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+</code></pre>
+<ul>
+<li>统计分析</li>
+</ul>
+<pre><code class="prism language-python">TitleClassification <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token string">'Officer'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Capt'</span><span class="token punctuation">,</span> <span class="token string">'Col'</span><span class="token punctuation">,</span> <span class="token string">'Major'</span><span class="token punctuation">,</span> <span class="token string">'Dr'</span><span class="token punctuation">,</span> <span class="token string">'Rev'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Royalty'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Don'</span><span class="token punctuation">,</span> <span class="token string">'Sir'</span><span class="token punctuation">,</span> <span class="token string">'the Countess'</span><span class="token punctuation">,</span> <span class="token string">'Dona'</span><span class="token punctuation">,</span> <span class="token string">'Lady'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Mrs'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Mme'</span><span class="token punctuation">,</span> <span class="token string">'Ms'</span><span class="token punctuation">,</span> <span class="token string">'Mrs'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Miss'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Mlle'</span><span class="token punctuation">,</span> <span class="token string">'Miss'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Mr'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Mr'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Master'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Master'</span><span class="token punctuation">,</span><span class="token string">'Jonkheer'</span><span class="token punctuation">]</span><span class="token punctuation">}</span>
+<span class="token keyword">for</span> title <span class="token keyword">in</span> TitleClassification<span class="token punctuation">.</span>keys<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    cnt <span class="token operator">=</span> <span class="token number">0</span>
+    <span class="token keyword">for</span> name <span class="token keyword">in</span> TitleClassification<span class="token punctuation">[</span>title<span class="token punctuation">]</span><span class="token punctuation">:</span>
+        cnt <span class="token operator">+=</span> allData<span class="token punctuation">.</span>groupby<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">'Title'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">.</span>size<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span>name<span class="token punctuation">]</span>
+    <span class="token keyword">print</span> <span class="token punctuation">(</span>title<span class="token punctuation">,</span><span class="token string">':'</span><span class="token punctuation">,</span>cnt<span class="token punctuation">)</span>
+</code></pre>
+<ul>
+<li>设置标签</li>
+</ul>
+<pre><code class="prism language-python">TitleClassification <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token string">'Officer'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Capt'</span><span class="token punctuation">,</span> <span class="token string">'Col'</span><span class="token punctuation">,</span> <span class="token string">'Major'</span><span class="token punctuation">,</span> <span class="token string">'Dr'</span><span class="token punctuation">,</span> <span class="token string">'Rev'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Royalty'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Don'</span><span class="token punctuation">,</span> <span class="token string">'Sir'</span><span class="token punctuation">,</span> <span class="token string">'the Countess'</span><span class="token punctuation">,</span> <span class="token string">'Dona'</span><span class="token punctuation">,</span> <span class="token string">'Lady'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Mrs'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Mme'</span><span class="token punctuation">,</span> <span class="token string">'Ms'</span><span class="token punctuation">,</span> <span class="token string">'Mrs'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Miss'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Mlle'</span><span class="token punctuation">,</span> <span class="token string">'Miss'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Mr'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Mr'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                       <span class="token string">'Master'</span><span class="token punctuation">:</span><span class="token punctuation">[</span><span class="token string">'Master'</span><span class="token punctuation">,</span><span class="token string">'Jonkheer'</span><span class="token punctuation">]</span><span class="token punctuation">}</span>
+TitleMap <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+<span class="token keyword">for</span> title <span class="token keyword">in</span> TitleClassification<span class="token punctuation">.</span>keys<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    TitleMap<span class="token punctuation">.</span>update<span class="token punctuation">(</span><span class="token builtin">dict</span><span class="token punctuation">.</span>fromkeys<span class="token punctuation">(</span>TitleClassification<span class="token punctuation">[</span>title<span class="token punctuation">]</span><span class="token punctuation">,</span> title<span class="token punctuation">)</span><span class="token punctuation">)</span>
+allData<span class="token punctuation">[</span><span class="token string">'Title'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'Title'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">map</span><span class="token punctuation">(</span>TitleMap<span class="token punctuation">)</span>
+</code></pre>
+<ul>
+<li>头衔不同，生存率不同</li>
+</ul>
+<pre><code class="prism language-python">sns<span class="token punctuation">.</span>barplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"Title"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>allData<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211140629976.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h2><a id="Ticket_176"></a>票号特征Ticket</h2>
+<ul>
+<li>有一定连续座位（存在票号相同的乘客）生存率高</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment">#Ticket</span>
+TicketCnt <span class="token operator">=</span> allData<span class="token punctuation">.</span>groupby<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">'Ticket'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">.</span>size<span class="token punctuation">(</span><span class="token punctuation">)</span>
+allData<span class="token punctuation">[</span><span class="token string">'SameTicketNum'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'Ticket'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">:</span>TicketCnt<span class="token punctuation">[</span>x<span class="token punctuation">]</span><span class="token punctuation">)</span>
+sns<span class="token punctuation">.</span>barplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">'SameTicketNum'</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">'Survived'</span><span class="token punctuation">,</span> data<span class="token operator">=</span>allData<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token comment"># allData['SameTicketNum']</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211140939787.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h2><a id="_188"></a>二维/多维分析</h2>
+<ul>
+<li>可以将任意两个/多个数据进行分析</li>
+</ul>
+<h3><a id="Pclass__Age_190"></a>二维分析之Pclass &amp; Age</h3>
+<pre><code class="prism language-python"><span class="token comment"># Pclass &amp; Age</span>
+sns<span class="token punctuation">.</span>violinplot<span class="token punctuation">(</span><span class="token string">"Pclass"</span><span class="token punctuation">,</span> <span class="token string">"Age"</span><span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">,</span> split<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211141142997.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h3><a id="Age__Sex_197"></a>二维分析之Age &amp; Sex</h3>
+<pre><code class="prism language-python"><span class="token comment"># Age &amp; Sex</span>
+sns<span class="token punctuation">.</span>swarmplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">'Age'</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Sex"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">'Survived'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211141226587.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h1><a id="___205"></a>四、数据清洗 &amp; 异常处理</h1>
+<h2><a id="_206"></a>离散型数据</h2>
+<h3><a id="__OneHot_207"></a>有可用标签 --&gt; One-Hot编码</h3>
+<ul>
+<li>Sex &amp; Pclass &amp; Embarked 都有已经设置好的标签（int或float或string等），可以直接进行get_dummies，拆分成多维向量，增加特征维度</li>
+<li>其中，Embarked存在一定缺失值，通过对整体的分析，填充上估计值</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># Sex</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">'Sex'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Sex"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token comment"># Pclass</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">'Pclass'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Pclass"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token comment"># Embarked</span>
+allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">'Embarked'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>isnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span> <span class="token comment"># 查看缺失值</span>
+allData<span class="token punctuation">.</span>groupby<span class="token punctuation">(</span>by<span class="token operator">=</span><span class="token punctuation">[</span><span class="token string">'Pclass'</span><span class="token punctuation">,</span><span class="token string">'Embarked'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Fare<span class="token punctuation">.</span>mean<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token comment"># Pclass=1, Embark=C, 中位数=76</span>
+allData<span class="token punctuation">[</span><span class="token string">'Embarked'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'Embarked'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>fillna<span class="token punctuation">(</span><span class="token string">'C'</span><span class="token punctuation">)</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">'Embarked'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Embarked"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre>
+<h3><a id="____OneHot_222"></a>无可用标签 --&gt; 设计标签 --&gt; One-Hot</h3>
+<ul>
+<li>FamilySize &amp; Name &amp; Ticket需要对整体数据统一处理，再进行标记</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># FamilySize</span>
+<span class="token keyword">def</span> <span class="token function">FamilyLabel</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">4</span>
+    <span class="token keyword">elif</span> <span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token number">2</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">3</span>
+    <span class="token keyword">elif</span> <span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token number">1</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">7</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">2</span>
+    <span class="token keyword">elif</span> <span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token number">5</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">1</span>
+    <span class="token keyword">elif</span> <span class="token punctuation">(</span>s <span class="token operator">&lt;</span> <span class="token number">1</span> <span class="token operator">or</span> s <span class="token operator">&gt;</span> <span class="token number">7</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">0</span>
+allData<span class="token punctuation">[</span><span class="token string">'FamilyLabel'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'FamilySize'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span>FamilyLabel<span class="token punctuation">)</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">'FamilyLabel'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Fam"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Name</span>
+TitleLabelMap <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token string">'Mr'</span><span class="token punctuation">:</span><span class="token number">1.0</span><span class="token punctuation">,</span>
+                 <span class="token string">'Mrs'</span><span class="token punctuation">:</span><span class="token number">5.0</span><span class="token punctuation">,</span>
+                 <span class="token string">'Miss'</span><span class="token punctuation">:</span><span class="token number">4.5</span><span class="token punctuation">,</span>
+                 <span class="token string">'Master'</span><span class="token punctuation">:</span><span class="token number">2.5</span><span class="token punctuation">,</span>
+                 <span class="token string">'Royalty'</span><span class="token punctuation">:</span><span class="token number">3.5</span><span class="token punctuation">,</span>
+                 <span class="token string">'Officer'</span><span class="token punctuation">:</span><span class="token number">2.0</span><span class="token punctuation">}</span>
+<span class="token keyword">def</span> <span class="token function">TitleLabel</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> TitleLabelMap<span class="token punctuation">[</span>s<span class="token punctuation">]</span>
+<span class="token comment"># allData['TitleLabel'] = allData['Title'].apply(TitleLabel)</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">'Title'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Title"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Ticket</span>
+<span class="token keyword">def</span> <span class="token function">TicketLabel</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token number">3</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">3</span>
+    <span class="token keyword">elif</span> <span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token number">2</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">2</span>
+    <span class="token keyword">elif</span> <span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token number">1</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">5</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">6</span> <span class="token operator">or</span> s <span class="token operator">==</span><span class="token number">7</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">1</span>
+    <span class="token keyword">elif</span> <span class="token punctuation">(</span>s <span class="token operator">&lt;</span> <span class="token number">1</span> <span class="token operator">or</span> s <span class="token operator">&gt;</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">0</span>
+allData<span class="token punctuation">[</span><span class="token string">'TicketLabel'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'SameTicketNum'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span>TicketLabel<span class="token punctuation">)</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">'TicketLabel'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"TicNum"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre>
+<h2><a id="_266"></a>连续型数据</h2>
+<h3><a id="Age__Fare_267"></a>Age &amp; Fare</h3>
+<ul>
+<li>进行标准化，缩小数据范围，加速梯度下降</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># Age</span>
+allData<span class="token punctuation">[</span><span class="token string">'Child'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'Age'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">:</span><span class="token number">1</span> <span class="token keyword">if</span> x <span class="token operator">&lt;=</span> <span class="token number">10</span> <span class="token keyword">else</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token comment"># 儿童标签</span>
+allData<span class="token punctuation">[</span><span class="token string">'Age'</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">'Age'</span><span class="token punctuation">]</span><span class="token operator">-</span>allData<span class="token punctuation">[</span><span class="token string">'Age'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>mean<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">/</span>allData<span class="token punctuation">[</span><span class="token string">'Age'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>std<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token comment"># 标准化</span>
+allData<span class="token punctuation">[</span><span class="token string">'Age'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>fillna<span class="token punctuation">(</span>value<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">,</span> inplace<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span> <span class="token comment"># 填充缺失值</span>
+<span class="token comment"># Fare</span>
+allData<span class="token punctuation">[</span><span class="token string">'Fare'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'Fare'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>fillna<span class="token punctuation">(</span><span class="token number">25</span><span class="token punctuation">)</span> <span class="token comment"># 填充缺失值</span>
+allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">'Survived'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>notnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token string">'Fare'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">'Survived'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>notnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token string">'Fare'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">:</span><span class="token number">300.0</span> <span class="token keyword">if</span> x<span class="token operator">&gt;</span><span class="token number">500</span> <span class="token keyword">else</span> x<span class="token punctuation">)</span>
+allData<span class="token punctuation">[</span><span class="token string">'Fare'</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">'Fare'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">:</span><span class="token punctuation">(</span>x<span class="token operator">-</span>allData<span class="token punctuation">[</span><span class="token string">'Fare'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>mean<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">/</span>allData<span class="token punctuation">[</span><span class="token string">'Fare'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>std<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre>
+<h2><a id="_280"></a>清除无用特征</h2>
+<ul>
+<li>清除无用特征，降低算法复杂度</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># 清除无用特征</span>
+allData<span class="token punctuation">.</span>drop<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">'Cabin'</span><span class="token punctuation">,</span> <span class="token string">'PassengerId'</span><span class="token punctuation">,</span> <span class="token string">'Ticket'</span><span class="token punctuation">,</span> <span class="token string">'Name'</span><span class="token punctuation">,</span> <span class="token string">'Title'</span><span class="token punctuation">,</span> <span class="token string">'Sex'</span><span class="token punctuation">,</span> <span class="token string">'SibSp'</span><span class="token punctuation">,</span> <span class="token string">'Parch'</span><span class="token punctuation">,</span> <span class="token string">'FamilySize'</span><span class="token punctuation">,</span> <span class="token string">'Embarked'</span><span class="token punctuation">,</span> <span class="token string">'Pclass'</span><span class="token punctuation">,</span> <span class="token string">'Title'</span><span class="token punctuation">,</span> <span class="token string">'FamilyLabel'</span><span class="token punctuation">,</span> <span class="token string">'SameTicketNum'</span><span class="token punctuation">,</span> <span class="token string">'TicketLabel'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> inplace<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+</code></pre>
+<h2><a id="_286"></a>重新分割训练集/测试集</h2>
+<ul>
+<li>一开始，为了处理方便，作者将训练集和测试集合并，现在根据Survived是否缺失来讲训练集和测试集分开</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># 重新分割数据集</span>
+train_data <span class="token operator">=</span> allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">'Survived'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>notnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span>
+test_data  <span class="token operator">=</span> allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">'Survived'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>isnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span>
+test_data <span class="token operator">=</span> test_data<span class="token punctuation">.</span>reset_index<span class="token punctuation">(</span>drop<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+
+xTrain <span class="token operator">=</span> train_data<span class="token punctuation">.</span>drop<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">'Survived'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+yTrain <span class="token operator">=</span> train_data<span class="token punctuation">[</span><span class="token string">'Survived'</span><span class="token punctuation">]</span>
+xTest  <span class="token operator">=</span> test_data<span class="token punctuation">.</span>drop<span class="token punctuation">(</span> <span class="token punctuation">[</span><span class="token string">'Survived'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+</code></pre>
+<h2><a id="_298"></a>特征相关性分析</h2>
+<ul>
+<li>该步骤用于筛选特征后向程序员反馈，特征是否有效、是否重叠</li>
+<li>若有问题，可以修改之前的特征方案</li>
+</ul>
+<pre><code class="prism language-python"><span class="token comment"># 特征间相关性分析</span>
+Correlation <span class="token operator">=</span> pd<span class="token punctuation">.</span>DataFrame<span class="token punctuation">(</span>allData<span class="token punctuation">[</span>allData<span class="token punctuation">.</span>columns<span class="token punctuation">.</span>to_list<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+colormap <span class="token operator">=</span> plt<span class="token punctuation">.</span>cm<span class="token punctuation">.</span>viridis
+plt<span class="token punctuation">.</span>figure<span class="token punctuation">(</span>figsize<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">24</span><span class="token punctuation">,</span><span class="token number">22</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+sns<span class="token punctuation">.</span>heatmap<span class="token punctuation">(</span>Correlation<span class="token punctuation">.</span>astype<span class="token punctuation">(</span><span class="token builtin">float</span><span class="token punctuation">)</span><span class="token punctuation">.</span>corr<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> linewidths<span class="token operator">=</span><span class="token number">0.1</span><span class="token punctuation">,</span> vmax<span class="token operator">=</span><span class="token number">1.0</span><span class="token punctuation">,</span> cmap<span class="token operator">=</span>colormap<span class="token punctuation">,</span> linecolor<span class="token operator">=</span><span class="token string">'white'</span><span class="token punctuation">,</span> annot<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> square<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><img src="https://img-blog.csdnimg.cn/20200211143013133.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2d6bjAwNDE3,size_16,color_FFFFFF,t_70" alt=""></p>
+<h1><a id="___311"></a>五、模型建立 &amp; 参数优化</h1>
+<h2><a id="_312"></a>导入模型包</h2>
+<pre><code class="prism language-python"><span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>pipeline <span class="token keyword">import</span> Pipeline
+<span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>ensemble <span class="token keyword">import</span> RandomForestClassifier
+<span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>model_selection <span class="token keyword">import</span> GridSearchCV
+<span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>feature_selection <span class="token keyword">import</span> SelectKBest
+</code></pre>
+<blockquote>
+<ul>
+<li>
+<h3><a id="_320"></a>作者选择<em>随机森林分类器</em></h3>
+</li>
+</ul>
+</blockquote>
+<h2><a id="_321"></a>网格搜索调试参数</h2>
+<pre><code class="prism language-python">pipe <span class="token operator">=</span> Pipeline<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">(</span><span class="token string">'select'</span><span class="token punctuation">,</span> SelectKBest<span class="token punctuation">(</span>k<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                 <span class="token punctuation">(</span><span class="token string">'classify'</span><span class="token punctuation">,</span> RandomForestClassifier<span class="token punctuation">(</span>random_state <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">,</span> max_features <span class="token operator">=</span> <span class="token string">'sqrt'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+param_test <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token string">'classify__n_estimators'</span><span class="token punctuation">:</span><span class="token builtin">list</span><span class="token punctuation">(</span><span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">20</span><span class="token punctuation">,</span><span class="token number">100</span><span class="token punctuation">,</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+              <span class="token string">'classify__max_depth'</span>   <span class="token punctuation">:</span><span class="token builtin">list</span><span class="token punctuation">(</span><span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token number">10</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">}</span>
+gsearch <span class="token operator">=</span> GridSearchCV<span class="token punctuation">(</span>estimator<span class="token operator">=</span>pipe<span class="token punctuation">,</span> param_grid<span class="token operator">=</span>param_test<span class="token punctuation">,</span> scoring<span class="token operator">=</span><span class="token string">'roc_auc'</span><span class="token punctuation">,</span> cv<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">)</span>
+gsearch<span class="token punctuation">.</span>fit<span class="token punctuation">(</span>xTrain<span class="token punctuation">,</span> yTrain<span class="token punctuation">)</span>
+<span class="token keyword">print</span> <span class="token punctuation">(</span>gsearch<span class="token punctuation">.</span>best_params_<span class="token punctuation">,</span> gsearch<span class="token punctuation">.</span>best_score_<span class="token punctuation">)</span>
+</code></pre>
+<ul>
+<li><strong>运行时间较长</strong>，结束后出现结果：</li>
+</ul>
+<pre><code class="prism language-python"><span class="token punctuation">{</span><span class="token string">'classify__max_depth'</span><span class="token punctuation">:</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token string">'classify__n_estimators'</span><span class="token punctuation">:</span> <span class="token number">70</span><span class="token punctuation">}</span> <span class="token number">0.8790924679681529</span>
+</code></pre>
+<h2><a id="_336"></a>建立模型</h2>
+<ul>
+<li>用以上参数进行输入模型</li>
+<li>训练</li>
+</ul>
+<pre><code class="prism language-python">rfc <span class="token operator">=</span> RandomForestClassifier<span class="token punctuation">(</span>n_estimators<span class="token operator">=</span><span class="token number">70</span><span class="token punctuation">,</span> max_depth<span class="token operator">=</span><span class="token number">6</span><span class="token punctuation">,</span> random_state<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">,</span> max_features<span class="token operator">=</span><span class="token string">'sqrt'</span><span class="token punctuation">)</span>
+rfc<span class="token punctuation">.</span>fit<span class="token punctuation">(</span>xTrain<span class="token punctuation">,</span> yTrain<span class="token punctuation">)</span>
+</code></pre>
+<h2><a id="_343"></a>导出结果</h2>
+<pre><code class="prism language-python">predictions <span class="token operator">=</span> rfc<span class="token punctuation">.</span>predict<span class="token punctuation">(</span>xTest<span class="token punctuation">)</span>
+output <span class="token operator">=</span> pd<span class="token punctuation">.</span>DataFrame<span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token string">'PassengerId'</span><span class="token punctuation">:</span>test<span class="token punctuation">[</span><span class="token string">'PassengerId'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">'Survived'</span><span class="token punctuation">:</span>predictions<span class="token punctuation">.</span>astype<span class="token punctuation">(</span><span class="token string">'int64'</span><span class="token punctuation">)</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+output<span class="token punctuation">.</span>to_csv<span class="token punctuation">(</span><span class="token string">'my_submission.csv'</span><span class="token punctuation">,</span> index<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+</code></pre>
+<h1><a id="_349"></a>六、提交评分</h1>
+<blockquote>
+<ul>
+<li><a href="https://www.kaggle.com/alexisbcook/titanic-tutorial">官方推荐教程</a></li>
+</ul>
+</blockquote>
+<h1><a id="_353"></a>附：完整代码</h1>
+<blockquote>
+<ul>
+<li>Jupiter Notebook导出为Python Script格式，需要ipynb格式请点击</li>
+<li>
+<h3><a id="GitHubhttpsgithubcomgzn00417TitanicMachineLearningfromDisaster_356"></a><a href="https://github.com/gzn00417/Titanic-Machine-Learning-from-Disaster">GitHub源代码</a></h3>
+</li>
+</ul>
+</blockquote>
+<pre><code class="prism language-python"><span class="token comment"># To add a new cell, type '# %%'</span>
+<span class="token comment"># To add a new markdown cell, type '# %% [markdown]'</span>
+
+<span class="token comment"># %%</span>
+<span class="token keyword">import</span> pandas <span class="token keyword">as</span> pd
+<span class="token keyword">from</span> pandas <span class="token keyword">import</span> Series<span class="token punctuation">,</span> DataFrame
+<span class="token keyword">import</span> numpy <span class="token keyword">as</span> np
+<span class="token keyword">from</span> matplotlib <span class="token keyword">import</span> pyplot <span class="token keyword">as</span> plt
+<span class="token keyword">import</span> seaborn <span class="token keyword">as</span> sns
+
+<span class="token comment"># %% [markdown]</span>
+<span class="token comment"># # Features</span>
+<span class="token comment"># Variable | Definition | Key</span>
+<span class="token comment"># :-:|:-:|:-:</span>
+<span class="token comment"># survival | Survival | 0 = No, 1 = Yes</span>
+<span class="token comment"># pclass | Ticket class(客舱等级) | 1 = 1st, 2 = 2nd, 3 = 3rd</span>
+<span class="token comment"># sex | Sex</span>
+<span class="token comment"># Age | Age in years</span>
+<span class="token comment"># sibsp | # of siblings / spouses aboard the Titanic(旁系亲属)</span>
+<span class="token comment"># parch | # of parents / children aboard the Titanic(直系亲属)</span>
+<span class="token comment"># ticket | Ticket number</span>
+<span class="token comment"># fare | Passenger fare</span>
+<span class="token comment"># cabin | Cabin number(客舱编号)</span>
+<span class="token comment"># embarked | Port of Embarkation(上船的港口编号) | C = Cherbourg, Q = Queenstown, S = Southampton</span>
+
+<span class="token comment"># %%</span>
+train <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span><span class="token string">"./kaggle/input/titanic/train.csv"</span><span class="token punctuation">)</span>
+test <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span><span class="token string">"./kaggle/input/titanic/test.csv"</span><span class="token punctuation">)</span>
+allData <span class="token operator">=</span> pd<span class="token punctuation">.</span>concat<span class="token punctuation">(</span><span class="token punctuation">[</span>train<span class="token punctuation">,</span> test<span class="token punctuation">]</span><span class="token punctuation">,</span> ignore_index<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+<span class="token comment"># dataNum = train.shape[0]</span>
+<span class="token comment"># featureNum = train.shape[1]</span>
+train<span class="token punctuation">.</span>head<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># Sex</span>
+sns<span class="token punctuation">.</span>countplot<span class="token punctuation">(</span><span class="token string">"Sex"</span><span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># Pclass</span>
+sns<span class="token punctuation">.</span>barplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"Pclass"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token comment"># Pclass &amp; Age</span>
+sns<span class="token punctuation">.</span>violinplot<span class="token punctuation">(</span><span class="token string">"Pclass"</span><span class="token punctuation">,</span> <span class="token string">"Age"</span><span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">,</span> split<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># FamilySize = SibSp + Parch + 1</span>
+allData<span class="token punctuation">[</span><span class="token string">"FamilySize"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"SibSp"</span><span class="token punctuation">]</span> <span class="token operator">+</span> allData<span class="token punctuation">[</span><span class="token string">"Parch"</span><span class="token punctuation">]</span> <span class="token operator">+</span> <span class="token number">1</span>
+sns<span class="token punctuation">.</span>barplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"FamilySize"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>allData<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># Embarked</span>
+sns<span class="token punctuation">.</span>countplot<span class="token punctuation">(</span><span class="token string">"Embarked"</span><span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># Age</span>
+sns<span class="token punctuation">.</span>stripplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Age"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">,</span> jitter<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+facet <span class="token operator">=</span> sns<span class="token punctuation">.</span>FacetGrid<span class="token punctuation">(</span>train<span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> aspect<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span>
+facet<span class="token punctuation">.</span><span class="token builtin">map</span><span class="token punctuation">(</span>sns<span class="token punctuation">.</span>kdeplot<span class="token punctuation">,</span> <span class="token string">"Age"</span><span class="token punctuation">,</span> shade<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+facet<span class="token punctuation">.</span><span class="token builtin">set</span><span class="token punctuation">(</span>xlim<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> train<span class="token punctuation">[</span><span class="token string">"Age"</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">max</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+facet<span class="token punctuation">.</span>add_legend<span class="token punctuation">(</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>xlabel<span class="token punctuation">(</span><span class="token string">"Age"</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>ylabel<span class="token punctuation">(</span><span class="token string">"density"</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token comment"># Age &amp; Sex</span>
+sns<span class="token punctuation">.</span>swarmplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"Age"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Sex"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">,</span> hue<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># Fare</span>
+sns<span class="token punctuation">.</span>stripplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Fare"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>train<span class="token punctuation">,</span> jitter<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># Name</span>
+<span class="token comment"># allData['Title'] = allData['Name'].str.extract('([A-Za-z]+)\.', expand=False) # str.extract不知道在干嘛</span>
+allData<span class="token punctuation">[</span><span class="token string">"Title"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"Name"</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span>
+    <span class="token keyword">lambda</span> x<span class="token punctuation">:</span> x<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">","</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">"."</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>strip<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token comment"># pd.crosstab(allData['Title'], allData['Sex'])</span>
+TitleClassification <span class="token operator">=</span> <span class="token punctuation">{</span>
+    <span class="token string">"Officer"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"Capt"</span><span class="token punctuation">,</span> <span class="token string">"Col"</span><span class="token punctuation">,</span> <span class="token string">"Major"</span><span class="token punctuation">,</span> <span class="token string">"Dr"</span><span class="token punctuation">,</span> <span class="token string">"Rev"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"Royalty"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"Don"</span><span class="token punctuation">,</span> <span class="token string">"Sir"</span><span class="token punctuation">,</span> <span class="token string">"the Countess"</span><span class="token punctuation">,</span> <span class="token string">"Dona"</span><span class="token punctuation">,</span> <span class="token string">"Lady"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"Mrs"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"Mme"</span><span class="token punctuation">,</span> <span class="token string">"Ms"</span><span class="token punctuation">,</span> <span class="token string">"Mrs"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"Miss"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"Mlle"</span><span class="token punctuation">,</span> <span class="token string">"Miss"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"Mr"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"Mr"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"Master"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"Master"</span><span class="token punctuation">,</span> <span class="token string">"Jonkheer"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span>
+TitleMap <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+<span class="token keyword">for</span> title <span class="token keyword">in</span> TitleClassification<span class="token punctuation">.</span>keys<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    TitleMap<span class="token punctuation">.</span>update<span class="token punctuation">(</span><span class="token builtin">dict</span><span class="token punctuation">.</span>fromkeys<span class="token punctuation">(</span>TitleClassification<span class="token punctuation">[</span>title<span class="token punctuation">]</span><span class="token punctuation">,</span> title<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token triple-quoted-string string">"""
+    # cnt = 0
+    for name in TitleClassification[title]:
+        cnt += allData.groupby(['Title']).size()[name]
+    # print (title,':',cnt)
+    """</span>
+allData<span class="token punctuation">[</span><span class="token string">"Title"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"Title"</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">map</span><span class="token punctuation">(</span>TitleMap<span class="token punctuation">)</span>
+sns<span class="token punctuation">.</span>barplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"Title"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>allData<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># Ticket</span>
+TicketCnt <span class="token operator">=</span> allData<span class="token punctuation">.</span>groupby<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">"Ticket"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">.</span>size<span class="token punctuation">(</span><span class="token punctuation">)</span>
+allData<span class="token punctuation">[</span><span class="token string">"SameTicketNum"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"Ticket"</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">:</span> TicketCnt<span class="token punctuation">[</span>x<span class="token punctuation">]</span><span class="token punctuation">)</span>
+sns<span class="token punctuation">.</span>barplot<span class="token punctuation">(</span>x<span class="token operator">=</span><span class="token string">"SameTicketNum"</span><span class="token punctuation">,</span> y<span class="token operator">=</span><span class="token string">"Survived"</span><span class="token punctuation">,</span> data<span class="token operator">=</span>allData<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token comment"># allData['SameTicketNum']</span>
+
+<span class="token comment"># %% [markdown]</span>
+<span class="token comment"># # 数据清洗</span>
+<span class="token comment"># - Sex &amp; Pclass &amp; Embarked --&gt; Ont-Hot</span>
+<span class="token comment"># - Age &amp; Fare --&gt; Standardize</span>
+<span class="token comment"># - FamilySize &amp; Name &amp; Ticket --&gt; ints --&gt; One-Hot</span>
+
+<span class="token comment"># %%</span>
+<span class="token comment"># Sex</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">"Sex"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Sex"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token comment"># Pclass</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">"Pclass"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Pclass"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token comment"># Embarked</span>
+allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">"Embarked"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>isnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span>  <span class="token comment"># 查看缺失值</span>
+allData<span class="token punctuation">.</span>groupby<span class="token punctuation">(</span>by<span class="token operator">=</span><span class="token punctuation">[</span><span class="token string">"Pclass"</span><span class="token punctuation">,</span> <span class="token string">"Embarked"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Fare<span class="token punctuation">.</span>mean<span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token comment"># Pclass=1, Embark=C, 中位数=76</span>
+allData<span class="token punctuation">[</span><span class="token string">"Embarked"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"Embarked"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>fillna<span class="token punctuation">(</span><span class="token string">"C"</span><span class="token punctuation">)</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">"Embarked"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Embarked"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># Age</span>
+allData<span class="token punctuation">[</span><span class="token string">"Child"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"Age"</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">:</span> <span class="token number">1</span> <span class="token keyword">if</span> x <span class="token operator">&lt;=</span> <span class="token number">10</span> <span class="token keyword">else</span> <span class="token number">0</span><span class="token punctuation">)</span>  <span class="token comment"># 儿童标签</span>
+allData<span class="token punctuation">[</span><span class="token string">"Age"</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">"Age"</span><span class="token punctuation">]</span> <span class="token operator">-</span> allData<span class="token punctuation">[</span><span class="token string">"Age"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>mean<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">/</span> allData<span class="token punctuation">[</span><span class="token string">"Age"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>std<span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token comment"># 标准化</span>
+allData<span class="token punctuation">[</span><span class="token string">"Age"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>fillna<span class="token punctuation">(</span>value<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">,</span> inplace<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>  <span class="token comment"># 填充缺失值</span>
+<span class="token comment"># Fare</span>
+allData<span class="token punctuation">[</span><span class="token string">"Fare"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"Fare"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>fillna<span class="token punctuation">(</span><span class="token number">25</span><span class="token punctuation">)</span>  <span class="token comment"># 填充缺失值</span>
+allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">"Survived"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>notnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token string">"Fare"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">"Survived"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>notnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">[</span>
+    <span class="token string">"Fare"</span>
+<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">:</span> <span class="token number">300.0</span> <span class="token keyword">if</span> x <span class="token operator">&gt;</span> <span class="token number">500</span> <span class="token keyword">else</span> x<span class="token punctuation">)</span>
+allData<span class="token punctuation">[</span><span class="token string">"Fare"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"Fare"</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span>
+    <span class="token keyword">lambda</span> x<span class="token punctuation">:</span> <span class="token punctuation">(</span>x <span class="token operator">-</span> allData<span class="token punctuation">[</span><span class="token string">"Fare"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>mean<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">/</span> allData<span class="token punctuation">[</span><span class="token string">"Fare"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>std<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># FamilySize</span>
+<span class="token keyword">def</span> <span class="token function">FamilyLabel</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">if</span> s <span class="token operator">==</span> <span class="token number">4</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">4</span>
+    <span class="token keyword">elif</span> s <span class="token operator">==</span> <span class="token number">2</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">3</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">3</span>
+    <span class="token keyword">elif</span> s <span class="token operator">==</span> <span class="token number">1</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">7</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">2</span>
+    <span class="token keyword">elif</span> s <span class="token operator">==</span> <span class="token number">5</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">6</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">1</span>
+    <span class="token keyword">elif</span> s <span class="token operator">&lt;</span> <span class="token number">1</span> <span class="token operator">or</span> s <span class="token operator">&gt;</span> <span class="token number">7</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">0</span>
+
+
+allData<span class="token punctuation">[</span><span class="token string">"FamilyLabel"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"FamilySize"</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span>FamilyLabel<span class="token punctuation">)</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">"FamilyLabel"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Fam"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Name</span>
+TitleLabelMap <span class="token operator">=</span> <span class="token punctuation">{</span>
+    <span class="token string">"Mr"</span><span class="token punctuation">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+    <span class="token string">"Mrs"</span><span class="token punctuation">:</span> <span class="token number">5.0</span><span class="token punctuation">,</span>
+    <span class="token string">"Miss"</span><span class="token punctuation">:</span> <span class="token number">4.5</span><span class="token punctuation">,</span>
+    <span class="token string">"Master"</span><span class="token punctuation">:</span> <span class="token number">2.5</span><span class="token punctuation">,</span>
+    <span class="token string">"Royalty"</span><span class="token punctuation">:</span> <span class="token number">3.5</span><span class="token punctuation">,</span>
+    <span class="token string">"Officer"</span><span class="token punctuation">:</span> <span class="token number">2.0</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span>
+
+
+<span class="token keyword">def</span> <span class="token function">TitleLabel</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> TitleLabelMap<span class="token punctuation">[</span>s<span class="token punctuation">]</span>
+
+
+<span class="token comment"># allData['TitleLabel'] = allData['Title'].apply(TitleLabel)</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">"Title"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"Title"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Ticket</span>
+<span class="token keyword">def</span> <span class="token function">TicketLabel</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">if</span> s <span class="token operator">==</span> <span class="token number">3</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">4</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">3</span>
+    <span class="token keyword">elif</span> s <span class="token operator">==</span> <span class="token number">2</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">8</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">2</span>
+    <span class="token keyword">elif</span> s <span class="token operator">==</span> <span class="token number">1</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">5</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">6</span> <span class="token operator">or</span> s <span class="token operator">==</span> <span class="token number">7</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">1</span>
+    <span class="token keyword">elif</span> s <span class="token operator">&lt;</span> <span class="token number">1</span> <span class="token operator">or</span> s <span class="token operator">&gt;</span> <span class="token number">8</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token number">0</span>
+
+
+allData<span class="token punctuation">[</span><span class="token string">"TicketLabel"</span><span class="token punctuation">]</span> <span class="token operator">=</span> allData<span class="token punctuation">[</span><span class="token string">"SameTicketNum"</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token builtin">apply</span><span class="token punctuation">(</span>TicketLabel<span class="token punctuation">)</span>
+allData <span class="token operator">=</span> allData<span class="token punctuation">.</span>join<span class="token punctuation">(</span>pd<span class="token punctuation">.</span>get_dummies<span class="token punctuation">(</span>allData<span class="token punctuation">[</span><span class="token string">"TicketLabel"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> prefix<span class="token operator">=</span><span class="token string">"TicNum"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># 清除无用特征</span>
+allData<span class="token punctuation">.</span>drop<span class="token punctuation">(</span>
+    <span class="token punctuation">[</span>
+        <span class="token string">"Cabin"</span><span class="token punctuation">,</span>
+        <span class="token string">"PassengerId"</span><span class="token punctuation">,</span>
+        <span class="token string">"Ticket"</span><span class="token punctuation">,</span>
+        <span class="token string">"Name"</span><span class="token punctuation">,</span>
+        <span class="token string">"Title"</span><span class="token punctuation">,</span>
+        <span class="token string">"Sex"</span><span class="token punctuation">,</span>
+        <span class="token string">"SibSp"</span><span class="token punctuation">,</span>
+        <span class="token string">"Parch"</span><span class="token punctuation">,</span>
+        <span class="token string">"FamilySize"</span><span class="token punctuation">,</span>
+        <span class="token string">"Embarked"</span><span class="token punctuation">,</span>
+        <span class="token string">"Pclass"</span><span class="token punctuation">,</span>
+        <span class="token string">"Title"</span><span class="token punctuation">,</span>
+        <span class="token string">"FamilyLabel"</span><span class="token punctuation">,</span>
+        <span class="token string">"SameTicketNum"</span><span class="token punctuation">,</span>
+        <span class="token string">"TicketLabel"</span><span class="token punctuation">,</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>
+    inplace<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># 重新分割数据集</span>
+train_data <span class="token operator">=</span> allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">"Survived"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>notnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span>
+test_data <span class="token operator">=</span> allData<span class="token punctuation">[</span>allData<span class="token punctuation">[</span><span class="token string">"Survived"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>isnull<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span>
+test_data <span class="token operator">=</span> test_data<span class="token punctuation">.</span>reset_index<span class="token punctuation">(</span>drop<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+
+xTrain <span class="token operator">=</span> train_data<span class="token punctuation">.</span>drop<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">"Survived"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+yTrain <span class="token operator">=</span> train_data<span class="token punctuation">[</span><span class="token string">"Survived"</span><span class="token punctuation">]</span>
+xTest <span class="token operator">=</span> test_data<span class="token punctuation">.</span>drop<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">"Survived"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+
+<span class="token comment"># allData.columns.to_list()</span>
+
+
+<span class="token comment"># %%</span>
+<span class="token comment"># 特征间相关性分析</span>
+Correlation <span class="token operator">=</span> pd<span class="token punctuation">.</span>DataFrame<span class="token punctuation">(</span>allData<span class="token punctuation">[</span>allData<span class="token punctuation">.</span>columns<span class="token punctuation">.</span>to_list<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+colormap <span class="token operator">=</span> plt<span class="token punctuation">.</span>cm<span class="token punctuation">.</span>viridis
+plt<span class="token punctuation">.</span>figure<span class="token punctuation">(</span>figsize<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">24</span><span class="token punctuation">,</span> <span class="token number">22</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+sns<span class="token punctuation">.</span>heatmap<span class="token punctuation">(</span>
+    Correlation<span class="token punctuation">.</span>astype<span class="token punctuation">(</span><span class="token builtin">float</span><span class="token punctuation">)</span><span class="token punctuation">.</span>corr<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    linewidths<span class="token operator">=</span><span class="token number">0.1</span><span class="token punctuation">,</span>
+    vmax<span class="token operator">=</span><span class="token number">1.0</span><span class="token punctuation">,</span>
+    cmap<span class="token operator">=</span>colormap<span class="token punctuation">,</span>
+    linecolor<span class="token operator">=</span><span class="token string">"white"</span><span class="token punctuation">,</span>
+    annot<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+    square<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># %% [markdown]</span>
+<span class="token comment"># # 网格筛选随机森林参数</span>
+<span class="token comment"># - n_estimator</span>
+<span class="token comment"># - max_depth</span>
+
+<span class="token comment"># %%</span>
+<span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>pipeline <span class="token keyword">import</span> Pipeline
+<span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>ensemble <span class="token keyword">import</span> RandomForestClassifier
+<span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>model_selection <span class="token keyword">import</span> GridSearchCV
+<span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>feature_selection <span class="token keyword">import</span> SelectKBest
+
+
+<span class="token comment"># %%</span>
+
+pipe <span class="token operator">=</span> Pipeline<span class="token punctuation">(</span>
+    <span class="token punctuation">[</span>
+        <span class="token punctuation">(</span><span class="token string">"select"</span><span class="token punctuation">,</span> SelectKBest<span class="token punctuation">(</span>k<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token punctuation">(</span><span class="token string">"classify"</span><span class="token punctuation">,</span> RandomForestClassifier<span class="token punctuation">(</span>random_state<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">,</span> max_features<span class="token operator">=</span><span class="token string">"sqrt"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token punctuation">]</span>
+<span class="token punctuation">)</span>
+param_test <span class="token operator">=</span> <span class="token punctuation">{</span>
+    <span class="token string">"classify__n_estimators"</span><span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">(</span><span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">20</span><span class="token punctuation">,</span> <span class="token number">100</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token string">"classify__max_depth"</span><span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">(</span><span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span>
+gsearch <span class="token operator">=</span> GridSearchCV<span class="token punctuation">(</span>estimator<span class="token operator">=</span>pipe<span class="token punctuation">,</span> param_grid<span class="token operator">=</span>param_test<span class="token punctuation">,</span> scoring<span class="token operator">=</span><span class="token string">"roc_auc"</span><span class="token punctuation">,</span> cv<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">)</span>
+gsearch<span class="token punctuation">.</span>fit<span class="token punctuation">(</span>xTrain<span class="token punctuation">,</span> yTrain<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>gsearch<span class="token punctuation">.</span>best_params_<span class="token punctuation">,</span> gsearch<span class="token punctuation">.</span>best_score_<span class="token punctuation">)</span>
+
+
+<span class="token comment"># %%</span>
+rfc <span class="token operator">=</span> RandomForestClassifier<span class="token punctuation">(</span>
+    n_estimators<span class="token operator">=</span><span class="token number">70</span><span class="token punctuation">,</span> max_depth<span class="token operator">=</span><span class="token number">6</span><span class="token punctuation">,</span> random_state<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">,</span> max_features<span class="token operator">=</span><span class="token string">"sqrt"</span>
+<span class="token punctuation">)</span>
+rfc<span class="token punctuation">.</span>fit<span class="token punctuation">(</span>xTrain<span class="token punctuation">,</span> yTrain<span class="token punctuation">)</span>
+predictions <span class="token operator">=</span> rfc<span class="token punctuation">.</span>predict<span class="token punctuation">(</span>xTest<span class="token punctuation">)</span>
+
+output <span class="token operator">=</span> pd<span class="token punctuation">.</span>DataFrame<span class="token punctuation">(</span>
+    <span class="token punctuation">{</span><span class="token string">"PassengerId"</span><span class="token punctuation">:</span> test<span class="token punctuation">[</span><span class="token string">"PassengerId"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"Survived"</span><span class="token punctuation">:</span> predictions<span class="token punctuation">.</span>astype<span class="token punctuation">(</span><span class="token string">"int64"</span><span class="token punctuation">)</span><span class="token punctuation">}</span>
+<span class="token punctuation">)</span>
+output<span class="token punctuation">.</span>to_csv<span class="token punctuation">(</span><span class="token string">"my_submission.csv"</span><span class="token punctuation">,</span> index<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+</code></pre>
+<blockquote>
+<h4><a id="GitHubhttpsgithubcomgzn00417TitanicMachineLearningfromDisaster_659"></a>链接：<a href="https://github.com/gzn00417/Titanic-Machine-Learning-from-Disaster">GitHub源代码</a></h4>
+</blockquote>
+</div>
+</body>
+
+</html>
