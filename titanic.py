@@ -29,7 +29,7 @@ test = pd.read_csv("./kaggle/input/titanic/test.csv")
 allData = pd.concat([train, test], ignore_index=True)
 # dataNum = train.shape[0]
 # featureNum = train.shape[1]
-train.info()
+train.head()
 
 
 # %%
@@ -49,7 +49,6 @@ plt.show()
 
 # %%
 # FamilySize = SibSp + Parch + 1
-# FamilyLabel 0 1 2
 allData["FamilySize"] = allData["SibSp"] + allData["Parch"] + 1
 sns.barplot(x="FamilySize", y="Survived", data=allData)
 plt.show()
@@ -113,6 +112,7 @@ plt.show()
 
 
 # %%
+# Ticket
 TicketCnt = allData.groupby(["Ticket"]).size()
 allData["SameTicketNum"] = allData["Ticket"].apply(lambda x: TicketCnt[x])
 sns.barplot(x="SameTicketNum", y="Survived", data=allData)
@@ -143,6 +143,7 @@ allData["Child"] = allData["Age"].apply(lambda x: 1 if x <= 10 else 0)  # 儿童
 allData["Age"] = (allData["Age"] - allData["Age"].mean()) / allData["Age"].std()  # 标准化
 allData["Age"].fillna(value=0, inplace=True)  # 填充缺失值
 # Fare
+allData["Fare"] = allData["Fare"].fillna(25)  # 填充缺失值
 allData[allData["Survived"].notnull()]["Fare"] = allData[allData["Survived"].notnull()][
     "Fare"
 ].apply(lambda x: 300.0 if x > 500 else x)
@@ -235,8 +236,6 @@ test_data = test_data.reset_index(drop=True)
 xTrain = train_data.drop(["Survived"], axis=1)
 yTrain = train_data["Survived"]
 xTest = test_data.drop(["Survived"], axis=1)
-
-xTest["Fare"] = xTest["Fare"].fillna(30)
 
 # allData.columns.to_list()
 
