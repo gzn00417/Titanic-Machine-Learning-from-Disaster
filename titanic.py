@@ -253,6 +253,7 @@ sns.heatmap(
     cmap=colormap,
     linecolor="white",
     annot=True,
+    square=True,
 )
 plt.show()
 
