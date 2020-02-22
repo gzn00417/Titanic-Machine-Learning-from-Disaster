@@ -1,5 +1,7 @@
 # Titanic : Machine Learning from Disaster
+
 > # Question
+> - [Kaggle Competition](https://www.kaggle.com/c/titanic)
 > - 要求你建立一个预测模型来回答这个问题：“什么样的人更有可能生存？”使用乘客数据（如姓名、年龄、性别、社会经济阶层等）。
 
 # 一、导入数据包和数据集
